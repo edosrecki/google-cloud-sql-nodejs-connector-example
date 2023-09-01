@@ -1,0 +1,50 @@
+{
+  "name": "google-cloud-sql-nodejs-connector-example",
+  "version": "1.0.0",
+  "description": "Example of using Google Cloud SQL connector for Node.js, with PostgreSQL.",
+  "main": "dist/index.js",
+  "keywords": [
+    "google",
+    "cloud",
+    "gcloud",
+    "sql",
+    "postgres"
+  ],
+  "scripts": {
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --fix --ext .ts",
+    "build:clean": "rimraf dist",
+    "build:transpile": "tsc -p tsconfig.json",
+    "build": "npm run build:clean && npm run build:transpile",
+    "node:dev": "cross-env NODE_ENV=development nodemon",
+    "start:dev": "npm run node:dev -- src/index.ts",
+    "prepare": "husky install"
+  },
+  "author": "Dinko Osrecki",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/cloud-sql-connector": "^0.5.1",
+    "@types/pg": "^8.10.2",
+    "dotenv": "^16.3.1",
+    "envalid": "^7.3.1",
+    "knex": "^2.5.1",
+    "pg": "^8.11.3",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "@tsconfig/node18": "^18.2.1",
+    "@types/node": "^18.17.12",
+    "@typescript-eslint/eslint-plugin": "^6.5.0",
+    "@typescript-eslint/parser": "^6.5.0",
+    "@typescript-eslint/typescript-estree": "^6.5.0",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.48.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "husky": "^8.0.3",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.3",
+    "rimraf": "^5.0.1",
+    "typescript": "^5.2.2"
+  }
+}
