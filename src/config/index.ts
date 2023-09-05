@@ -2,6 +2,7 @@ import { env } from './env'
 
 export const config = {
   database: {
+    type: env.DATABASE_TYPE,
     instance: env.DATABASE_INSTANCE,
     usePublicIp: env.DATABASE_USE_PUBLIC_IP,
     useIamAuth: env.DATABASE_USE_IAM_AUTH,

@@ -1,9 +1,13 @@
-import dotenv from 'dotenv'
+import * as dotenv from 'dotenv'
 import { bool, cleanEnv, num, str } from 'envalid'
 
 dotenv.config()
 
 export const env = cleanEnv(process.env, {
+  DATABASE_TYPE: str({
+    desc: 'Database type.',
+    choices: ['mysql', 'postgresql', 'sqlserver'],
+  }),
   DATABASE_INSTANCE: str({
     desc: 'Cloud SQL instance connection name.',
     example: 'my-project:europe-west1:my-instance',

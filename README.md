@@ -1,13 +1,19 @@
 # Google Cloud SQL Node.js Connector Example
 
-Example usage of [Google Cloud SQL Node.js Connector][cloud-sql-connector-node] with PostgreSQL and [`knex`][knex]. This is an alternative approach for connecting to Google Cloud SQL instance without needing Google Cloud SQL Auth Proxy.
+Example usage of [Google Cloud SQL Node.js Connector][cloud-sql-connector-node]. This is an alternative approach for connecting to Google Cloud SQL instance without needing Google Cloud SQL Auth Proxy.
+
+Examples include:
+
+* Databases: MySQL, PostgreSQL, and SQL Server
+* Libraries: [knex], [sequelize]
 
 [cloud-sql-connector-node]: https://github.com/GoogleCloudPlatform/cloud-sql-nodejs-connector
 [knex]: https://knexjs.org/
+[sequelize]: https://sequelize.org/
 
-## Setup
+## Google Cloud SQL Setup
 
-1. Create Cloud SQL PostgreSQL instance.
+1. Create Cloud SQL instance.
     1. Decide on IP type (public IP, or private IP).
     2. Decide on auth type (built-in user, or IAM user).
 2. (Optional) Configure service account for IAM authentication.
@@ -20,8 +26,8 @@ Example usage of [Google Cloud SQL Node.js Connector][cloud-sql-connector-node] 
 nvm install
 npm install
 
-npm run start:dev
+cp .env.example .env
 
-# Expected output:
-# [ { connected: true } ]
+npm run knex:dev
+npm run sequelize:dev
 ```
