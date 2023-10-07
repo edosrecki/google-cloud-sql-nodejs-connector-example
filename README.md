@@ -5,11 +5,12 @@ Example usage of [Google Cloud SQL Node.js Connector][cloud-sql-connector-node].
 Examples include:
 
 * Databases: MySQL, PostgreSQL, and SQL Server
-* Libraries: [knex], [sequelize]
+* Libraries: [knex], [sequelize], [typeorm]
 
 [cloud-sql-connector-node]: https://github.com/GoogleCloudPlatform/cloud-sql-nodejs-connector
 [knex]: https://knexjs.org/
 [sequelize]: https://sequelize.org/
+[typeorm]: https://typeorm.io/
 
 ## Google Cloud SQL Setup
 
@@ -23,11 +24,31 @@ Examples include:
 ## Run
 
 ```sh
+## Install dependencies
+## ~~~~~~~~~~~~~~~~~~~~
 nvm install
 npm install
 
-cp .env.example .env
+## Configure environment for a DB that you want to test
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# PostgreSQL
+cp .env.postgres.example .env
+# MySQL
+cp .env.mysql.example .env
+# SQL Server
+cp .env.sqlserver.example .env
 
-npm run knex:dev
-npm run sequelize:dev
+# Update values in .env
+vim .env
+
+## Run examples for each library
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm run knex
+# { connected: 'True' }
+
+npm run sequelize
+# Executing (default): SELECT 1+1 AS result
+
+npm run typeorm
+# [ { connected: 'True' } ]
 ```
