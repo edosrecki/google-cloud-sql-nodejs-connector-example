@@ -1,30 +1,23 @@
 {
   "name": "google-cloud-sql-nodejs-connector-example",
-  "version": "1.0.0",
-  "description": "Example of using Google Cloud SQL connector for Node.js, with PostgreSQL.",
-  "main": "dist/index.js",
-  "keywords": [
-    "google",
-    "cloud",
-    "gcloud",
-    "sql",
-    "postgres"
-  ],
+  "version": "0.0.0-dev",
+  "description": "Examples of using Google Cloud SQL connector for Node.js.",
+  "license": "ISC",
+  "author": "Dinko Osrecki",
+  "private": true,
   "scripts": {
+    "prepare": "husky install",
+    "clean": "rimraf dist",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --fix --ext .ts",
-    "clean": "rimraf dist",
     "compile": "tsc -p tsconfig.json",
     "build": "npm run clean && npm run compile",
     "node:dev": "cross-env NODE_ENV=development nodemon",
     "knex": "npm run node:dev -- src/knex/index.ts",
-    "sequelize": "npm run node:dev -- src/sequelize/index.ts",
-    "typeorm": "npm run node:dev -- src/typeorm/index.ts",
     "prisma": "npm run node:dev -- src/prisma/index.ts",
-    "prepare": "husky install"
+    "sequelize": "npm run node:dev -- src/sequelize/index.ts",
+    "typeorm": "npm run node:dev -- src/typeorm/index.ts"
   },
-  "author": "Dinko Osrecki",
-  "license": "ISC",
   "dependencies": {
     "@google-cloud/cloud-sql-connector": "^1.0.0",
     "@prisma/client": "^5.4.1",
