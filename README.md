@@ -14,12 +14,18 @@ Examples include:
 
 ## Google Cloud SQL Setup
 
-1. Create Cloud SQL instance.
-    1. Decide on IP type (public IP, or private IP).
-    2. Decide on auth type (built-in user, or IAM user).
-2. (Optional) Configure service account for IAM authentication.
+### Terraform
+
+See [terraform/README.adoc](terraform/README.adoc) for instructions.
+
+### Manual
+
+1. Create Cloud SQL instance(s).
+   1. (Optional) Configure private IP connectivity.
+   1. (Optional) Enable flag for IAM authentication.
+3. (Optional) Create a service account for IAM authentication to the SQL instance.
     1. Assign `Cloud SQL Client` and `Cloud SQL Instance User` roles.
-    2. Download key file or use Application Default Credentials.
+    2. Download JSON key file, or use Application Default Credentials, or service account impersonation.
 
 ## Run
 
@@ -31,15 +37,19 @@ npm install
 
 ## Configure environment for a DB that you want to test
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# PostgreSQL
-cp .env.postgres.example .env
-# MySQL
-cp .env.mysql.example .env
-# SQL Server
-cp .env.sqlserver.example .env
+# If you used manual setup
+cp .env.postgres.example .env   # PostgreSQL
+cp .env.mysql.example .env      # MySQL
+cp .env.sqlserver.example .env  # SQL Server
 
-# Update values in .env
 vim .env
+
+# If you used Terraform
+cd terraform
+terraform output -raw postgres_env > ../.env   # PostgreSQL
+terraform output -raw mysql_env > ../.env      # MySQL
+terraform output -raw sqlserver_env > ../.env  # SQL Server
+cd ..
 
 ## Run examples for each library
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
