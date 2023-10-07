@@ -16,40 +16,40 @@ Using this Terraform configuration you can automatically provision following res
 brew install terraform
 ----
 
-2. Authenticate to Google Cloud:
+2. Authenticate to Google Cloud
 +
 Make sure that your user has sufficient roles to create resource mentioned in the first paragraph.
 +
 [source,sh]
 ----
-  gcloud auth application-default login
+gcloud auth application-default login
 ----
 
 ### Setup
 
-1. Populate Terraform variables with your own values.
+1. Populate Terraform variables with your own values
 +
 [source,sh]
 ----
-  cp example.tfvars value.tfvars
-  vim value.tfvars
+cp example.tfvars value.tfvars
+vim value.tfvars
 ----
 
 2. Provision infrastructure with Terraform
 +
 [source,sh]
 ----
-  terraform init
-  terraform apply --var-file value.tfvars
+terraform init
+terraform apply --var-file value.tfvars
 ----
 
-3. Generate .env file for a SQL instance that you want to use
+3. Generate `.env` file for a SQL instance that you want to use
 +
 [source,sh]
 ----
-  terraform output -raw mysql_env > ../.env
-  terraform output -raw postgres_env > ../.env
-  terraform output -raw sqlserver_env > ../.env
+terraform output -raw mysql_env > ../.env
+terraform output -raw postgres_env > ../.env
+terraform output -raw sqlserver_env > ../.env
 ----
 
 ### Teardown
@@ -58,5 +58,5 @@ Make sure that your user has sufficient roles to create resource mentioned in th
 +
 [source,sh]
 ----
-  terraform destroy --var-file value.tfvars
+terraform destroy --var-file value.tfvars
 ----
