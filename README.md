@@ -5,12 +5,13 @@ Example usage of [Google Cloud SQL Node.js Connector][cloud-sql-connector-node].
 Examples include:
 
 * Databases: MySQL, PostgreSQL, and SQL Server
-* Libraries: [knex], [sequelize], [typeorm]
+* Libraries: [knex], [sequelize], [typeorm], [prisma]
 
 [cloud-sql-connector-node]: https://github.com/GoogleCloudPlatform/cloud-sql-nodejs-connector
 [knex]: https://knexjs.org/
 [sequelize]: https://sequelize.org/
 [typeorm]: https://typeorm.io/
+[prisma]: https://www.prisma.io/
 
 ## Google Cloud SQL Setup
 
@@ -65,5 +66,8 @@ npm run sequelize
 # Executing (default): SELECT 1+1 AS result
 
 npm run typeorm
+# [ { connected: 'True' } ]
+
+npm run prisma
 # [ { connected: 'True' } ]
 ```

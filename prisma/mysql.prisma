@@ -1,0 +1,16 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma requires datasource and model to be defined
+datasource db {
+  provider = "mysql"
+  url      = "mysql://dummy:dummy@localhost:3306/dummy"
+}
+
+model Dummy {
+  dummy String @id
+}
