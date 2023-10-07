@@ -1,0 +1,62 @@
+## Provision infrastructure with Terraform
+
+Using this Terraform configuration you can automatically provision following resources:
+
+* Create a service account which will be used to access Cloud SQL instances via IAM authentication.
+* Assign Cloud SQL Client, and Cloud SQL Instance User roles to the service account.
+* Create Cloud SQL instances for PostgreSQL 15, MySQL 8, and SQL Server 2019.
+* Create IAM users for PostgreSQL and MySQL instances.
+
+### Prerequisites
+
+1. Install Terraform
++
+[source,sh]
+----
+brew install terraform
+----
+
+2. Authenticate to Google Cloud:
++
+Make sure that your user has sufficient roles to create resource mentioned in the first paragraph.
++
+[source,sh]
+----
+  gcloud auth application-default login
+----
+
+### Setup
+
+1. Populate Terraform variables with your own values.
++
+[source,sh]
+----
+  cp example.tfvars value.tfvars
+  vim value.tfvars
+----
+
+2. Provision infrastructure with Terraform
++
+[source,sh]
+----
+  terraform init
+  terraform apply --var-file value.tfvars
+----
+
+3. Generate .env file for a SQL instance that you want to use
++
+[source,sh]
+----
+  terraform output -raw mysql_env > ../.env
+  terraform output -raw postgres_env > ../.env
+  terraform output -raw sqlserver_env > ../.env
+----
+
+### Teardown
+
+1. Destroy infrastructure with Terraform
++
+[source,sh]
+----
+  terraform destroy --var-file value.tfvars
+----
