@@ -53,6 +53,11 @@ cd ..
 
 ## Run examples for each library
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## NOTE:
+## If you are using IAM authentication, make sure to authenticate
+## as that service account, either by using JSON key, Application
+## Default Credentials, or service account impersonation.
+
 npm run knex
 # { connected: 'True' }
 
