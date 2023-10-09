@@ -117,6 +117,51 @@ token, which will be included in the signed ephemeral certificate. For this to w
 service account that you use to connect to the Cloud SQL instance must also have the
 `Cloud SQL Instance User` role.
 
+Here is a conceptual diagram that shows the interaction between a database driver (used by
+the application code), Cloud SQL Connector, and Cloud SQL instance. Keep in mind that
+instance metadata, and certificates are cached as long as they are valid.
+
+[source,text]
+----
++-----------+          +---------------+                           +---------------+ +---------------+
+| DB Driver |          | SQL Connector |                           | SQL Admin API | | SQL Instance  |
++-----------+          +---------------+                           +---------------+ +---------------+
+      |                        |                                           |                 |
+      | Build a secure         |                                           |                 |
+      | connection.            |                                           |                 |
+      |----------------------->|                                           |                 |
+      |                        |                                           |                 |
+      |                        | Get instance info.                        |                 |
+      |                        |------------------------------------------>|                 |
+      |                        |                                           |                 |
+      |                        |         IP addresses, server certificate. |                 |
+      |                        |<------------------------------------------|                 |
+      |                        |                                           |                 |
+      |                        | Generate RSA key pair.                    |                 |
+      |                        |-----------------------                    |                 |
+      |                        |                      |                    |                 |
+      |                        |<----------------------                    |                 |
+      |                        |                                           |                 |
+      |                        | Generate ephemeral certificate            |                 |
+      |                        | (public key, access token)                |                 |
+      |                        |------------------------------------------>|                 |
+      |                        |                                           |                 |
+      |                        |                        X.509 certificate. |                 |
+      |                        |<------------------------------------------|                 |
+      |                        |                                           |                 |
+      |                        | Establish TLS v.1.3                       |                 |
+      |                        | connection (port 3307).                   |                 |
+      |                        |------------------------------------------------------------>|
+      |                        |                                           |                 |
+      |                        |                                           |      Connected. |
+      |                        |<------------------------------------------------------------|
+      |                        |                                           |                 |
+      |               Use this |                                           |                 |
+      |            connection. |                                           |                 |
+      |<-----------------------|                                           |                 |
+      |                        |                                           |                 |
+----
+
 == Usage
 
 :pg-code: https://github.com/brianc/node-postgres/blob/b357e1884ad25b23a4ab034b443ddfc8c8261951/packages/pg/lib/connection.js#L18-L21
