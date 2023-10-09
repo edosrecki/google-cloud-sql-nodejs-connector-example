@@ -1,0 +1,272 @@
+= Deep Dive into Google Cloud SQL Connector for Node.JS
+
+:google-blog: https://cloud.google.com/blog/products/databases/cloud-sql-nodejs-connector-is-ga
+
+Last week {google-blog}[Google Cloud announced general availability] of Cloud SQL Node.JS
+connector. This makes it the fourth language-specific connector after Java, Python, and Go.
+In this article I will describe the features of the connector, show how it works under the
+hood, demonstrate how to use it in a Node.JS application, and discuss the current support for
+the connector in the most popular Node.JS database libraries.
+
+== Features
+
+Cloud SQL Connector is an alternative, and now recommended, way of connecting to Google Cloud
+SQL instances from Node.JS applications, instead of using the Cloud SQL Auth Proxy. It
+provides the following features, which do not differ from the ones provided by the proxy:
+
+. *IAM Authorization*: Use IAM roles to define which user/service accounts can access your instances. Each account must have the `Cloud SQL Client` role for the instance.
+. *Secure Connection*: Connector establishes a TLS v1.3 connection to your instance, and
+verifies identities of both client and the server. You do not need to manage TLS certificates,
+or firewall rules.
+. *Automatic IAM DB Authentication*: You can use Connector to seamlessly connect to your
+instances which use IAM database users. Each account must additionally have the `Cloud SQL
+Instance User` role for the instance.
+
+It is important to note that Cloud SQL Connector *does not provide a connection path* to your
+instance. If your instance is on a VPC network behind a private IP, your application
+workloads must already have access to that VPC network.
+
+== How It Works
+
+To start investigating how the connector works, let's create a simple Cloud SQL instance
+with default options in Google Cloud Console. It doesn't matter which database engine we
+choose, since the connector works with all of them. For the purpose of this article I will
+use PostgreSQL.
+
+=== Port 3307
+
+:nmap: https://nmap.org/
+
+Let's scan the ports of our Cloud SQL instance using {nmap}[`nmap`]. We will scan standard ports for
+MySQL, PostgreSQL, and SQL Server.
+
+[source,sh]
+----
+> nmap -Pn -p 1433,1434,3306,5432 $CLOUD_SQL_INSTANCE_PRIMARY_IP
+
+PORT        STATE       SERVICE
+1433/tcp    filtered    ms-sql-s
+1434/tcp    filtered    ms-sql-m
+3306/tcp    filtered    mysql
+5432/tcp    filtered    postgresql
+----
+
+*Standard database server ports are in a _filtered_ state*, which means that a firewall is blocking the access. In order to connect to the Cloud SQL instance on these ports we need to
+whitelist our public IP address in the Cloud SQL instance configuration.
+
+Find out your public IP address, and add it to your Cloud SQL instance's authorized networks
+in Google Cloud Console. After that, scan the ports again.
+
+[source,sh]
+----
+> nmap -Pn -p 1433,1434,3306,5432 $CLOUD_SQL_INSTANCE_PRIMARY_IP
+
+PORT        STATE       SERVICE
+1433/tcp    filtered    ms-sql-s
+1434/tcp    filtered    ms-sql-m
+3306/tcp    filtered    mysql
+5432/tcp    open        postgresql
+----
+
+Now, port 5432 is in an _open_ state, which means that we can connect to the Cloud SQL
+instance using a standard PostgreSQL client.
+
+However, as I already mentioned, one of the benefits of using a Cloud SQL Connector, is that
+we do not have to manage firewall rules. This is due to the fact that the *connector uses a
+special port to connect to the Cloud SQL instance - port 3307*. Let's scan this port.
+
+[source,sh]
+----
+> nmap -Pn -p 3307 $CLOUD_SQL_INSTANCE_PRIMARY_IP
+
+PORT        STATE    SERVICE
+3307/tcp    open     opsession-prxy
+----
+
+*Port 3307 is always in an _open_ state*, which means that the server is accepting connections
+on that port without the need to maintain any firewall rules. In fact, try removing your
+public IP address from the authorized networks, and you will still see port 3307 as open.
+
+=== Ephemeral Certificates
+
+:generate-cert-api: https://cloud.google.com/sql/docs/mysql/admin-api/rest/v1beta4/connect/generateEphemeralCert
+:tls-socket: https://nodejs.dev/en/api/v18/tls/#tlstlssocket
+
+Google Cloud SQL instance runs a proxy service on port 3307. This proxy service is responsible
+for establishing a secure connection to the database server. Google Cloud SQL Connector
+communicates with the proxy service using a TLS v1.3 connection. This *connection is secured
+using an ephemeral X.509 certificate*, which is generated using the Cloud SQL Admin API.
+
+In order for this to work, you must enable the Cloud SQL Admin API in your Google Cloud
+project, and the service account that you use to connect to the Cloud SQL instance must have
+the `Cloud SQL Client` role.
+
+Internally, the connector first generates an RSA-2048 private/public key pair. It then sends
+the public key to the Cloud SQL Admin API, which {generate-cert-api}[*generates an ephemeral
+certificate*] that is signed by the private key that belongs to the Cloud SQL instance. This
+certificate, together with the generated private key, is then used to create a
+{tls-socket}[`TLSSocket`] (duplex stream) to the primary IP address of the Cloud SQL instance
+on port 3307.
+
+Ephemeral certificates are short-lived, and they expire after 1 hour. The connector
+*automatically renews the certificate* before it expires, as well as when there are
+connection errors.
+
+If you use IAM database authentication, the connector will additionally obtain the access
+token, which will be included in the signed ephemeral certificate. For this to work, the
+service account that you use to connect to the Cloud SQL instance must also have the
+`Cloud SQL Instance User` role.
+
+== Usage
+
+:pg-code: https://github.com/brianc/node-postgres/blob/b357e1884ad25b23a4ab034b443ddfc8c8261951/packages/pg/lib/connection.js#L18-L21
+:mysql2-code: https://github.com/sidorares/node-mysql2/blob/ba15fe25703665e516ab0a23af8d828d1473b8c3/lib/connection.js#L63-L65
+:tedious-code: https://github.com/tediousjs/tedious/blob/443701f35da3bbc4469bdce3168dae28362324a8/src/connection.ts#L2074
+
+Since the connector already takes care of establishing a secure connection to the Cloud SQL
+instance, there must be a way for us to *pass that connection to the database driver*, so that
+it can use it instead of creating a new one. In fact, we will not be passing an already
+established connection, but a connection builder which can be used to maintain connection
+pools by the underlying database drivers.
+
+Cloud SQL Connector class exposes a `getOptions` method, which returns an object containing
+the connection builder: `{ stream: () => tls.TLSSocket }`. This {pg-code}[connection builder
+is used by _pg_ driver] to create new connections to the Cloud SQL instance. Similar
+implementations are available for {mysql2-code}[_mysql2_], and {tedious-code}[_tedious_].
+
+Let's take a look at a simple example of using the connector with _pg_ driver to connect
+to our Cloud SQL instance over public IP, using built-in password authentication.
+
+[source,ts]
+----
+import { AuthTypes, Connector, IpAddressTypes } from '@google-cloud/cloud-sql-connector'
+import pg from 'pg'
+
+const connector = new Connector()
+const { stream } = await connector.getOptions({
+  instanceConnectionName: 'my-project:region:my-instance',
+  ipType: IpAddressTypes.PUBLIC, // or IpAddressTypes.PRIVATE
+  authType: AuthTypes.PASSWORD   // or AuthTypes.IAM
+})
+
+const pool = new pg.Pool({
+  stream,
+  user: 'my-user',
+  password: 'my-password',       // omit if using IAM auth
+  database: 'my-database',
+  max: 5
+})
+
+const {rows} = await pool.query('SELECT true AS is_connected')
+console.table(rows)
+
+await pool.end()
+connector.close()
+----
+
+=== Double encryption?!
+
+:tedious-tls-error: https://github.com/tediousjs/tedious/blob/443701f35da3bbc4469bdce3168dae28362324a8/src/connection.ts#L3281-L3285
+:connector-tedious-issue: https://github.com/GoogleCloudPlatform/cloud-sql-nodejs-connector/issues/230
+
+Depending on the implementation, there is a possibility that the underlying database driver
+opens *another TLS connection* over the existing TLS connection that was established by the
+connector, which would have a certain performance impact.
+
+It is therefore beneficial to disable such behavior, if possible. For example, _tedious_
+driver accepts an `{ encrypt: boolean = true }` option, which should be set to `false` when
+using the connector. Cloud SQL Connector class exposes additional `getTediousOptions` method,
+which returns an object that in addition to the stream builder, contains the `encrypt` option
+set to `false`, so that they can both be passed to the _tedious_ driver.
+
+Keep in mind that in this case, you must *uncheck the Allow only SSL connections option* for
+your Cloud SQL Server instance. Otherwise _tedious_ will find out during pre-login that the
+SQL Server requires a TLS connection, but we have set `encrypt = false`. This will cause
+an {tedious-tls-error}[error to be thrown]. There is an {connector-tedious-issue}[open issue]
+for this in Cloud SQL Connector repository. This is not an issue for PostgreSQL and MySQL instances, so you can keep the flag checked for them.
+
+== Supported Libraries
+
+:github-examples: https://github.com/edosrecki/google-cloud-sql-nodejs-connector-example
+:typeorm-pr: https://github.com/typeorm/typeorm/pull/10356
+:proxy-workaround: https://github.com/edosrecki/google-cloud-sql-nodejs-connector-example/blob/3b5492637f581f9f8919b78fc83fbdf247684d12/src/prisma/proxy.ts
+
+Cloud SQL Connector is supported in all Node.JS database drivers, starting with the versions
+listed in the table below.
+
+[source,text]
+----
+┌─────────┬─────────┐
+│ Library │ Version │
+├─────────┼─────────┤
+│ pg      │ 8.9.0   │
+│ mysql2  │ 0.14.1  │
+│ tedious │ 16.1.0  │
+│ mssql   │ 10.0.0  │
+└─────────┴─────────┘
+----
+
+I also investigated the support for the connector in the most popular high level database
+libraries. The connector is mostly supported in the latest versions of these libraries, with
+some caveats. You can find {github-examples}[examples of using the connector] with all these
+libraries in my GitHub repository.
+
+[source,text]
+----
+┌───────────┬──────────┬──────────┬───────────┐
+│ Library   │ pg       │ mysql2   │ mssql     │
+├───────────┼──────────┼──────────┼───────────┤
+│ knex      │ YES      │ YES      │ YES       │
+│ sequelize │ YES      │ YES      │ YES       │
+│ typeorm   │ YES      │ YES      │ YES, butᴬ │
+│ prisma    │ NO, butᴮ │ NO, butᴮ │ NO, butᴮ  │
+└───────────┴──────────┴──────────┴───────────┘
+----
+
+ᴬ _typeorm_ officially supports `mssql@v9`, but the support for the custom stream builder was
+added in `mssql@v10`. Since `mssql` is a peer dependency of `typeorm`, you can force override
+it and use the Cloud SQL Connector with _typeorm_. There is an {typeorm-pr}[open PR to add
+support for `mssql@v10` in _typeorm_].
+
+ᴮ _prisma_ does not support custom connection builders, it only accepts connection strings.
+Therefore, you need to use a workaround if you wish to use the Cloud SQL Connector with
+_prisma_. You do that by {proxy-workaround}[creating a local TCP proxy that forwards the
+traffic to the stream] created by the Cloud SQL Connector. You then pass a connection string
+to _prisma_, which points to the local proxy.
+
+Here is an example of using the Cloud SQL Connector with `knex` library.
+
+[source,ts]
+----
+import { AuthTypes, Connector, IpAddressTypes } from '@google-cloud/cloud-sql-connector'
+import knex from 'knex'
+
+const connector = new Connector()
+const { stream } = await connector.getOptions({
+  instanceConnectionName: 'my-project:region:my-instance',
+  ipType: IpAddressTypes.PUBLIC,
+  authType: AuthTypes.PASSWORD
+})
+
+const database = knex({
+  client: 'pg',
+  connection: {
+    stream,
+    user: 'my-user',
+    password: 'my-password',
+    database: 'my-database',
+  },
+})
+----
+
+== Conclusion
+
+Cloud SQL Node.js Connector is a great alternative to the Cloud SQL Auth Proxy. It provides
+similar features, but without the need to run a separate Auth Proxy process (VM instance,
+Kubernetes Deployment, Kubernetes Pod sidecar, ...), which can be *very beneficial if you
+run your application workloads in a serverless environment* (e.g. Cloud Run).
+
+The connector is supported in all Node.JS database drivers, and in most popular high level
+database libraries. However, if you are using Prisma ORM, you most likely want to stay with
+the Auth Proxy for now, since the workaround to use the connector with Prisma is not very
+elegant.
