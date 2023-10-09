@@ -59,6 +59,10 @@ cd ..
 ## as that service account, either by using JSON key, Application
 ## Default Credentials, or service account impersonation.
 
+npm run pg
+npm run mysql2
+npm run mssql
+
 npm run knex
 # { connected: 'True' }
 

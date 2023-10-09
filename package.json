@@ -13,6 +13,9 @@
     "compile": "tsc -p tsconfig.json",
     "build": "npm run clean && npm run compile",
     "node:dev": "cross-env NODE_ENV=development nodemon",
+    "mysql2": "npm run node:dev -- src/mysql2.ts",
+    "mssql": "npm run node:dev -- src/mssql.ts",
+    "pg": "npm run node:dev -- src/pg.ts",
     "knex": "npm run node:dev -- src/knex/index.ts",
     "prisma": "npm run node:dev -- src/prisma/index.ts",
     "sequelize": "npm run node:dev -- src/sequelize/index.ts",
@@ -36,6 +39,7 @@
   },
   "devDependencies": {
     "@tsconfig/node18": "^18.2.2",
+    "@types/mssql": "^9.1.1",
     "@types/node": "^18.17.12",
     "@types/shelljs": "^0.8.13",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
